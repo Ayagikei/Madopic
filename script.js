@@ -1694,6 +1694,11 @@ async function renderWithFallbackScales(node, targetWidth, targetHeight, scales)
                             svg.style.setProperty('max-width', '100%', 'important');
                         });
                     } catch (_) {}
+
+                    // html2canvas 对 list marker 支持较弱：在克隆文档中直接插入 marker 节点，确保导出可见（不影响页面预览）
+                    try {
+                        ensureExportListMarkers(clonedDoc);
+                    } catch (_) {}
                     
                     clonedDoc.documentElement.style.setProperty('overflow', 'hidden', 'important');
                     clonedDoc.body.style.setProperty('margin', '0', 'important');
@@ -1710,6 +1715,64 @@ async function renderWithFallbackScales(node, targetWidth, targetHeight, scales)
         }
     }
     throw lastError || new Error('所有缩放倍数均导出失败');
+}
+
+function ensureExportListMarkers(clonedDoc) {
+    const root = clonedDoc.getElementById('madopic-export-poster');
+    if (!root) return;
+
+    const style = clonedDoc.createElement('style');
+    style.textContent = `
+#madopic-export-poster .poster-content ul,
+#madopic-export-poster .poster-content ol{
+  list-style: none !important;
+  padding-left: 24px !important;
+}
+#madopic-export-poster .poster-content li{
+  position: relative !important;
+  display: block !important;
+}
+#madopic-export-poster .madopic-export-marker{
+  position: absolute !important;
+  left: -22px !important;
+  top: 0.02em !important;
+  width: 18px !important;
+  text-align: center !important;
+  line-height: 1 !important;
+}
+#madopic-export-poster .madopic-export-marker[data-marker="number"]{
+  left: -30px !important;
+  width: 28px !important;
+  text-align: right !important;
+}
+#madopic-export-poster .madopic-export-marker[data-marker="bullet"]{
+  font-size: 1.3em !important;
+}
+#madopic-export-poster .madopic-export-li-body{
+  display: block !important;
+}`;
+    (clonedDoc.head || clonedDoc.documentElement).appendChild(style);
+
+    const lists = root.querySelectorAll('.poster-content ul, .poster-content ol');
+    lists.forEach((list) => {
+        const isOrdered = String(list.tagName).toLowerCase() === 'ol';
+        const items = Array.from(list.children).filter((child) => String(child.tagName).toLowerCase() === 'li');
+        items.forEach((li, index) => {
+            if (li.querySelector(':scope > .madopic-export-marker')) return;
+
+            const marker = clonedDoc.createElement('span');
+            marker.className = 'madopic-export-marker';
+            marker.dataset.marker = isOrdered ? 'number' : 'bullet';
+            marker.textContent = isOrdered ? `${index + 1}.` : '•';
+
+            const body = clonedDoc.createElement('div');
+            body.className = 'madopic-export-li-body';
+            while (li.firstChild) body.appendChild(li.firstChild);
+
+            li.appendChild(marker);
+            li.appendChild(body);
+        });
+    });
 }
 
 // ===== 通知系统 =====
