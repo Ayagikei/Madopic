@@ -1725,32 +1725,35 @@ function ensureExportListMarkers(clonedDoc) {
     style.textContent = `
 #madopic-export-poster .poster-content ul,
 #madopic-export-poster .poster-content ol{
-  list-style: none !important;
-  padding-left: 24px !important;
-}
-#madopic-export-poster .poster-content li{
-  position: relative !important;
-  display: block !important;
-}
-#madopic-export-poster .madopic-export-marker{
-  position: absolute !important;
-  left: -22px !important;
-  top: 0.02em !important;
-  width: 18px !important;
-  text-align: center !important;
-  line-height: 1 !important;
-}
-#madopic-export-poster .madopic-export-marker[data-marker="number"]{
-  left: -30px !important;
-  width: 28px !important;
-  text-align: right !important;
-}
-#madopic-export-poster .madopic-export-marker[data-marker="bullet"]{
-  font-size: 1.3em !important;
-}
-#madopic-export-poster .madopic-export-li-body{
-  display: block !important;
-}`;
+	  list-style: none !important;
+	  padding-left: 24px !important;
+	}
+	#madopic-export-poster .poster-content li{
+	  --madopic-marker-width: 1.2em;
+	  --madopic-marker-gap: 0.4em;
+	  display: flex !important;
+	  align-items: baseline !important;
+	  margin-left: calc(-1 * (var(--madopic-marker-width) + var(--madopic-marker-gap))) !important;
+	}
+	#madopic-export-poster .madopic-export-marker{
+	  display: inline-block !important;
+	  flex: 0 0 auto !important;
+	  width: var(--madopic-marker-width) !important;
+	  margin-right: var(--madopic-marker-gap) !important;
+	  line-height: inherit !important;
+	  text-align: center !important;
+	}
+	#madopic-export-poster .madopic-export-marker[data-marker="number"]{
+	  text-align: right !important;
+	}
+	#madopic-export-poster .madopic-export-marker[data-marker="bullet"]{
+	  font-size: 1.3em !important;
+	}
+	#madopic-export-poster .madopic-export-li-body{
+	  display: block !important;
+	  flex: 1 1 auto !important;
+	  min-width: 0 !important;
+	}`;
     (clonedDoc.head || clonedDoc.documentElement).appendChild(style);
 
     const lists = root.querySelectorAll('.poster-content ul, .poster-content ol');
@@ -1759,6 +1762,9 @@ function ensureExportListMarkers(clonedDoc) {
         const items = Array.from(list.children).filter((child) => String(child.tagName).toLowerCase() === 'li');
         items.forEach((li, index) => {
             if (li.querySelector(':scope > .madopic-export-marker')) return;
+
+            li.style.setProperty('--madopic-marker-width', isOrdered ? '3em' : '1.2em');
+            li.style.setProperty('--madopic-marker-gap', '0.4em');
 
             const marker = clonedDoc.createElement('span');
             marker.className = 'madopic-export-marker';
