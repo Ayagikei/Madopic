@@ -4,12 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Madopic - Markdown to Picture</title>
-    <link rel="icon" type="image/svg+xml" href="favicon.svg?v=20250906">
-    <link rel="apple-touch-icon" href="madopic.png?v=20250906">
+    <link rel="icon" type="image/svg+xml" href="favicon.svg?v=20260117_3">
+    <link rel="apple-touch-icon" href="madopic.png?v=20260117_3">
     <meta name="theme-color" content="#6366f1">
     <meta name="description" content="精美的 Markdown 转图片工具，轻松制作社交媒体图片">
-    <link rel="manifest" href="manifest.json?v=20250906">
-    <link rel="stylesheet" href="style.css?v=20250906">
+    <link rel="manifest" href="manifest.json?v=20260117_3">
+    <link rel="stylesheet" href="style.css?v=20260117_3">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <!-- KaTeX CSS -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
@@ -216,6 +216,19 @@
                         </div>
                     </div>
                     <div class="option-group">
+                        <label>图片背景（bg/）：</label>
+                        <div class="bg-image-controls">
+                            <button class="btn btn-secondary btn-sm" id="refreshBgImages" type="button">
+                                <i class="fas fa-arrows-rotate"></i> 刷新列表
+                            </button>
+                            <span class="bg-image-status" id="bgImageStatus"></span>
+                        </div>
+                        <div class="bg-image-grid" id="bgImagePresets"></div>
+                        <div class="bg-image-hint">
+                            提示：将图片放入 <code>bg/</code> 目录后点击刷新；若你的静态服务器禁用目录索引，可添加 <code>bg/manifest.json</code> 作为兜底清单。
+                        </div>
+                    </div>
+                    <div class="option-group">
                         <label>自定义颜色：</label>
                         <div class="color-inputs">
                             <div class="color-input-group">
@@ -284,6 +297,25 @@
                     </div>
                 </div>
 
+                <!-- 面板样式 -->
+                <div class="setting-section">
+                    <h4><i class="fas fa-square"></i> 面板样式</h4>
+                    <div class="option-group">
+                        <label>面板透明度：</label>
+                        <div class="slider-group">
+                            <input type="range" id="panelOpacitySlider" min="50" max="100" value="95" step="1">
+                            <span class="slider-value" id="panelOpacityValue">95%</span>
+                        </div>
+                    </div>
+                    <div class="option-group">
+                        <label>面板圆角：</label>
+                        <div class="slider-group">
+                            <input type="range" id="panelRadiusSlider" min="0" max="32" value="12" step="1">
+                            <span class="slider-value" id="panelRadiusValue">12px</span>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="panel-actions">
                     <button class="btn btn-secondary" id="cancelLayout">取消</button>
                     <button class="btn btn-primary" id="applyLayout">应用</button>
@@ -295,6 +327,6 @@
         <div class="overlay" id="overlay"></div>
     </div>
 
-    <script src="script.js?v=20250906"></script>
+    <script src="script.js?v=20260117_3"></script>
 </body>
 </html>

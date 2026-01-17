@@ -1,6 +1,8 @@
 // 全局变量
 let currentZoom = 100;
 let currentBackground = 'gradient1';
+let currentBackgroundMode = 'gradient'; // 'gradient' | 'image'
+let currentBackgroundImage = ''; // e.g. 'bg/01.png'
 
 // ===== 数学公式渲染器 =====
 class MathRenderer {
@@ -463,6 +465,10 @@ const backgroundPresets = {
     gradient8: 'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)'
 };
 
+const BG_FOLDER_PATH = 'bg/';
+const BG_MANIFEST_URL = 'bg/manifest.json';
+const BG_IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'svg', 'avif'];
+
 // DOM 元素
 const markdownInput = document.getElementById('markdownInput');
 const lineNumbersEl = document.querySelector('.line-numbers');
@@ -480,6 +486,8 @@ let currentPadding = 40;
 let currentWidth = 640;
 let currentMode = 'free'; // 'free' | 'xhs' | 'pyq'
 let fixedHeights = { xhs: null, pyq: null }; // 等待用户提供后设置
+let currentPanelOpacity = 0.95; // 0~1
+let currentPanelRadius = 12; // px
 
 // 图片数据存储
 const imageDataStore = new Map();
@@ -514,6 +522,7 @@ function initializeApp() {
     applyFontSize(currentFontSize);
     applyPadding(currentPadding);
     applyWidth(currentWidth);
+    applyPanelStyle(currentPanelOpacity, currentPanelRadius);
     
     // 初始化图表渲染器主题
     diagramRenderer.setTheme('default');
@@ -544,6 +553,10 @@ function setupEventListeners() {
     document.getElementById('backgroundBtn').addEventListener('click', openBackgroundPanel);
     document.getElementById('cancelBackground').addEventListener('click', closeBackgroundPanel);
     document.getElementById('applyBackground').addEventListener('click', applyBackgroundSettings);
+    const refreshBgImagesBtn = document.getElementById('refreshBgImages');
+    if (refreshBgImagesBtn) {
+        refreshBgImagesBtn.addEventListener('click', refreshBgImagePresets);
+    }
     
     // 文字布局设置面板
     document.getElementById('layoutBtn').addEventListener('click', openLayoutPanel);
@@ -926,6 +939,7 @@ function openBackgroundPanel() {
     backgroundPanel.classList.add('active');
     overlay.classList.add('active');
     document.body.style.overflow = 'hidden';
+    refreshBgImagePresets();
 }
 
 function closeBackgroundPanel() {
@@ -960,9 +974,11 @@ function setupBackgroundPresets() {
         preset.addEventListener('click', function() {
             // 移除其他选中状态
             document.querySelectorAll('.bg-preset').forEach(p => p.classList.remove('active'));
+            clearBgImagePresetSelection();
             // 添加选中状态
             this.classList.add('active');
             currentBackground = this.getAttribute('data-bg');
+            currentBackgroundMode = 'gradient';
         });
     });
 }
@@ -976,7 +992,9 @@ function setupColorInputs() {
         input.addEventListener('change', function() {
             // 取消预设选择
             document.querySelectorAll('.bg-preset').forEach(p => p.classList.remove('active'));
+            clearBgImagePresetSelection();
             currentBackground = 'custom';
+            currentBackgroundMode = 'gradient';
         });
     });
 }
@@ -984,7 +1002,9 @@ function setupColorInputs() {
 function applyBackgroundSettings() {
     // 应用背景设置
     let backgroundCSS;
-    if (currentBackground === 'custom') {
+    if (currentBackgroundMode === 'image' && currentBackgroundImage) {
+        backgroundCSS = `url("${currentBackgroundImage}") center / cover no-repeat`;
+    } else if (currentBackground === 'custom') {
         const colorStart = document.getElementById('colorStart').value;
         const colorEnd = document.getElementById('colorEnd').value;
         const direction = document.getElementById('gradientDirection').value;
@@ -1012,6 +1032,13 @@ function applyLayoutSettings() {
     // 应用宽度设置
     currentWidth = parseInt(document.getElementById('widthSlider').value);
     applyWidth(currentWidth);
+
+    // 应用面板样式设置
+    const opacityValue = parseInt(document.getElementById('panelOpacitySlider').value, 10);
+    const radiusValue = parseInt(document.getElementById('panelRadiusSlider').value, 10);
+    currentPanelOpacity = Number.isFinite(opacityValue) ? Math.max(0, Math.min(1, opacityValue / 100)) : 0.95;
+    currentPanelRadius = Number.isFinite(radiusValue) ? Math.max(0, radiusValue) : 12;
+    applyPanelStyle(currentPanelOpacity, currentPanelRadius);
     
     closeLayoutPanel();
     
@@ -1021,6 +1048,134 @@ function applyLayoutSettings() {
 
 function applyBackground(backgroundCSS) {
     markdownPoster.style.background = backgroundCSS;
+}
+
+function clearBgImagePresetSelection() {
+    document.querySelectorAll('.bg-image-preset').forEach(preset => preset.classList.remove('active'));
+    currentBackgroundImage = '';
+    if (currentBackgroundMode === 'image') {
+        currentBackgroundMode = 'gradient';
+    }
+}
+
+async function refreshBgImagePresets() {
+    const container = document.getElementById('bgImagePresets');
+    const statusEl = document.getElementById('bgImageStatus');
+    if (!container) return;
+
+    // 重建列表时先清空，避免重复渲染
+    container.innerHTML = '';
+    if (statusEl) statusEl.textContent = '扫描中...';
+
+    const images = await discoverBgImages();
+    if (!images.length) {
+        const empty = document.createElement('div');
+        empty.className = 'bg-image-empty';
+        empty.textContent = '未发现 bg/ 目录中的图片。';
+        container.appendChild(empty);
+        if (statusEl) statusEl.textContent = '未发现图片';
+        return;
+    }
+
+    images.forEach(({ name, url }) => {
+        const tile = document.createElement('div');
+        tile.className = 'bg-image-preset';
+        tile.style.backgroundImage = `url("${url}")`;
+        tile.title = name;
+        tile.dataset.bgImage = url;
+        if (currentBackgroundMode === 'image' && currentBackgroundImage === url) {
+            tile.classList.add('active');
+        }
+        tile.addEventListener('click', function() {
+            document.querySelectorAll('.bg-image-preset').forEach(p => p.classList.remove('active'));
+            this.classList.add('active');
+            document.querySelectorAll('.bg-preset').forEach(p => p.classList.remove('active'));
+            currentBackgroundMode = 'image';
+            currentBackgroundImage = this.dataset.bgImage || '';
+        });
+        container.appendChild(tile);
+    });
+
+    if (statusEl) statusEl.textContent = `已发现 ${images.length} 张`;
+}
+
+async function discoverBgImages() {
+    const fromManifest = await readBgManifestImages();
+    if (fromManifest.length) return fromManifest;
+    const listing = await fetchBgDirectoryListing();
+    if (!listing) return [];
+    return parseBgDirectoryListing(listing);
+}
+
+async function readBgManifestImages() {
+    try {
+        const res = await fetch(BG_MANIFEST_URL, { cache: 'no-store' });
+        if (!res.ok) return [];
+        const json = await res.json();
+        const list = Array.isArray(json) ? json : (json && Array.isArray(json.images) ? json.images : []);
+        return normalizeBgImageList(list);
+    } catch (_) {
+        return [];
+    }
+}
+
+async function fetchBgDirectoryListing() {
+    try {
+        const res = await fetch(BG_FOLDER_PATH, { cache: 'no-store' });
+        if (!res.ok) return '';
+        return await res.text();
+    } catch (_) {
+        return '';
+    }
+}
+
+function parseBgDirectoryListing(html) {
+    try {
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+        const hrefs = Array.from(doc.querySelectorAll('a'))
+            .map(a => (a.getAttribute('href') || '').trim())
+            .filter(Boolean)
+            .map(href => href.split('#')[0].split('?')[0])
+            .filter(href => href && href !== '../' && href !== './')
+            .filter(href => !href.endsWith('/'))
+            // 仅取当前目录文件，避免把子目录/上级目录拼进去
+            .filter(href => !href.includes('/'));
+
+        const files = [];
+        hrefs.forEach(name => {
+            const lower = name.toLowerCase();
+            const ext = lower.includes('.') ? lower.split('.').pop() : '';
+            if (!BG_IMAGE_EXTENSIONS.includes(ext)) return;
+            if (name.startsWith('.')) return;
+            files.push(name);
+        });
+
+        return normalizeBgImageList(files);
+    } catch (_) {
+        return [];
+    }
+}
+
+function normalizeBgImageList(entries) {
+    const seen = new Set();
+    const normalized = [];
+    (entries || []).forEach((entry) => {
+        const raw = String(entry || '').trim();
+        if (!raw) return;
+        if (raw.includes('..')) return;
+
+        const cleaned = raw.replace(/^\.\//, '').replace(/^\//, '');
+        const path = cleaned.startsWith('bg/') ? cleaned : `bg/${cleaned}`;
+        const name = path.split('/').pop() || path;
+        const url = encodeURI(path);
+
+        const key = url.toLowerCase();
+        if (seen.has(key)) return;
+        seen.add(key);
+        normalized.push({ name, url });
+    });
+
+    return normalized.sort((a, b) => a.name.localeCompare(b.name, 'en', { numeric: true }));
 }
 
 function applyFontSize(fontSize) {
@@ -1045,6 +1200,14 @@ function applyWidth(width) {
     markdownPoster.style.width = `${width}px`;
 }
 
+function applyPanelStyle(opacity, radiusPx) {
+    // 用 !important 覆盖 CSS 中的默认值，确保预览与导出克隆节点一致
+    const safeOpacity = Number.isFinite(opacity) ? Math.max(0, Math.min(1, opacity)) : 0.95;
+    const safeRadius = Number.isFinite(radiusPx) ? Math.max(0, radiusPx) : 12;
+    posterContent.style.setProperty('background', `rgba(255, 255, 255, ${safeOpacity})`, 'important');
+    posterContent.style.setProperty('border-radius', `${safeRadius}px`, 'important');
+}
+
 function setupSliders() {
     const fontSizeSlider = document.getElementById('fontSizeSlider');
     const fontSizeValue = document.getElementById('fontSizeValue');
@@ -1052,6 +1215,10 @@ function setupSliders() {
     const paddingValue = document.getElementById('paddingValue');
     const widthSlider = document.getElementById('widthSlider');
     const widthValue = document.getElementById('widthValue');
+    const panelOpacitySlider = document.getElementById('panelOpacitySlider');
+    const panelOpacityValue = document.getElementById('panelOpacityValue');
+    const panelRadiusSlider = document.getElementById('panelRadiusSlider');
+    const panelRadiusValue = document.getElementById('panelRadiusValue');
     
     // 字体大小滑块
     fontSizeSlider.addEventListener('input', function() {
@@ -1081,6 +1248,30 @@ function setupSliders() {
     fontSizeValue.textContent = `${fontSizeSlider.value}px`;
     paddingValue.textContent = `${paddingSlider.value}px`;
     widthValue.textContent = `${widthSlider.value}px`;
+
+    if (panelOpacitySlider && panelOpacityValue) {
+        panelOpacityValue.textContent = `${panelOpacitySlider.value}%`;
+        const onPanelOpacityInput = function() {
+            const value = parseInt(this.value, 10);
+            panelOpacityValue.textContent = `${value}%`;
+            const radius = panelRadiusSlider ? parseInt(panelRadiusSlider.value, 10) : currentPanelRadius;
+            applyPanelStyle(value / 100, radius);
+        };
+        panelOpacitySlider.addEventListener('input', onPanelOpacityInput);
+        panelOpacitySlider.addEventListener('change', onPanelOpacityInput);
+    }
+
+    if (panelRadiusSlider && panelRadiusValue) {
+        panelRadiusValue.textContent = `${panelRadiusSlider.value}px`;
+        const onPanelRadiusInput = function() {
+            const value = parseInt(this.value, 10);
+            panelRadiusValue.textContent = `${value}px`;
+            const opacity = panelOpacitySlider ? parseInt(panelOpacitySlider.value, 10) / 100 : currentPanelOpacity;
+            applyPanelStyle(opacity, value);
+        };
+        panelRadiusSlider.addEventListener('input', onPanelRadiusInput);
+        panelRadiusSlider.addEventListener('change', onPanelRadiusInput);
+    }
 }
 
 

@@ -729,6 +729,67 @@ body {
     gap: 12px;
 }
 
+.bg-image-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.btn.btn-sm {
+    padding: 6px 10px;
+    font-size: 12px;
+    border-radius: 8px;
+}
+
+.bg-image-status {
+    font-size: 12px;
+    color: #64748b;
+}
+
+.bg-image-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+}
+
+.bg-image-preset {
+    width: 60px;
+    height: 40px;
+    border-radius: 8px;
+    cursor: pointer;
+    border: 3px solid transparent;
+    transition: all 0.2s ease;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+.bg-image-preset:hover {
+    transform: scale(1.05);
+}
+
+.bg-image-preset.active {
+    border-color: var(--primary-color);
+    transform: scale(1.05);
+}
+
+.bg-image-empty {
+    grid-column: 1 / -1;
+    font-size: 12px;
+    color: #64748b;
+    background: #f8fafc;
+    border: 1px dashed #cbd5e1;
+    border-radius: 8px;
+    padding: 10px 12px;
+    line-height: 1.4;
+}
+
+.bg-image-hint {
+    font-size: 12px;
+    color: #64748b;
+    line-height: 1.4;
+}
+
 .bg-preset {
     width: 60px;
     height: 40px;
